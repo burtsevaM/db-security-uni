@@ -1,0 +1,500 @@
+==================================================
+ТЕСТ 1. GUEST
+==================================================
+Pager usage is off.
+--- кто подключен ---
+ current_user | session_user 
+--------------+--------------
+ demo_guest   | demo_guest
+(1 row)
+
+--- guest: может читать projects ---
+ project_id |     name     | status 
+------------+--------------+--------
+          1 | Cyber Shield | active
+          2 | Star Archive | active
+(2 rows)
+
+--- guest: не может вставлять tasks (ожидается ERROR) ---
+--- guest: не может читать users (ожидается ERROR) ---
+
+==================================================
+ТЕСТ 2. EMPLOYEE
+==================================================
+Pager usage is off.
+--- кто подключен ---
+ current_user  | session_user  
+---------------+---------------
+ demo_employee | demo_employee
+(1 row)
+
+--- employee: может читать только разрешенные колонки users ---
+ user_id | username |    full_name     | is_active |         created_at         
+---------+----------+------------------+-----------+----------------------------
+       1 | neo      | Neo Anderson     | t         | 2026-04-07 19:37:19.341669
+       2 | trinity  | Trinity          | t         | 2026-04-07 19:37:19.341669
+       3 | leia     | Leia Organa      | t         | 2026-04-07 19:37:19.341669
+       4 | tony     | Tony Stark       | t         | 2026-04-07 19:37:19.341669
+       5 | hermione | Hermione Granger | t         | 2026-04-07 19:37:19.341669
+(5 rows)
+
+--- employee: не может читать email (ожидается ERROR) ---
+--- employee: может читать projects ---
+ project_id |     name     | status 
+------------+--------------+--------
+          1 | Cyber Shield | active
+          2 | Star Archive | active
+(2 rows)
+
+--- employee: может читать tasks ---
+ task_id |               title               |   status    | priority 
+---------+-----------------------------------+-------------+----------
+       1 | Настроить журналирование действий | in_progress |        1
+       2 | Добавить страницу входа           | todo        |        2
+       3 | Реализовать роли доступа          | review      |        1
+       4 | Подготовить отчет по инцидентам   | done        |        3
+       5 | Проверить резервное копирование   | todo        |        2
+(5 rows)
+
+--- employee: может читать comments ---
+ comment_id | task_id | user_id 
+------------+---------+---------
+          1 |       1 |       4
+          2 |       1 |       1
+          3 |       3 |       3
+          4 |       6 |       3
+          5 |       9 |       5
+(5 rows)
+
+--- employee: может читать task_history ---
+ history_id | task_id | changed_by | field_name 
+------------+---------+------------+------------
+          1 |       1 |          1 | status
+          2 |       3 |          3 | status
+          3 |       4 |          6 | status
+          4 |       9 |          5 | status
+(4 rows)
+
+--- employee: может INSERT/UPDATE tasks и INSERT comments; изменения откатываем ---
+BEGIN
+INSERT 0 1
+UPDATE 1
+INSERT 0 1
+ROLLBACK
+--- employee: не может DELETE tasks (ожидается ERROR) ---
+
+==================================================
+ТЕСТ 3. MANAGER
+==================================================
+Pager usage is off.
+--- кто подключен ---
+ current_user | session_user 
+--------------+--------------
+ demo_manager | demo_manager
+(1 row)
+
+--- manager: может изменять projects, tasks, comments, task_history; изменения откатываем ---
+BEGIN
+INSERT 0 1
+UPDATE 1
+DELETE 1
+INSERT 0 1
+ROLLBACK
+--- manager: не может изменять users (ожидается ERROR) ---
+
+==================================================
+ТЕСТ 4. ADMIN
+==================================================
+Pager usage is off.
+--- кто подключен ---
+ current_user | session_user 
+--------------+--------------
+ demo_admin   | demo_admin
+(1 row)
+
+--- admin: может читать users и access_logs ---
+ user_id | username |          email          
+---------+----------+-------------------------
+       1 | neo      | neo@zion.local
+       2 | trinity  | trinity@zion.local
+       3 | leia     | leia@rebellion.local
+       4 | tony     | tony@stark.local
+       5 | hermione | hermione@hogwarts.local
+(5 rows)
+
+ log_id | user_id |     action     | resource_type 
+--------+---------+----------------+---------------
+      1 |       1 | login          | system
+      2 |       4 | create_project | project
+      3 |       3 | create_project | project
+      4 |       2 | update_task    | task
+      5 |       5 | view_report    | project
+(5 rows)
+
+--- admin: может менять users и создавать объекты в схеме app; изменения откатываем ---
+BEGIN
+UPDATE 1
+CREATE TABLE
+DROP TABLE
+ROLLBACK
+
+==================================================
+ТЕСТ 5. SUPERUSER
+==================================================
+Pager usage is off.
+--- кто подключен ---
+  current_user  |  session_user  
+----------------+----------------
+ demo_superuser | demo_superuser
+(1 row)
+
+--- superuser: полный доступ к таблицам схемы app ---
+ access_logs_count 
+-------------------
+                 6
+(1 row)
+
+--- superuser: может создавать и удалять объекты; изменения откатываем ---
+BEGIN
+CREATE TABLE
+DROP TABLE
+ROLLBACK
+
+==================================================
+ДОПОЛНИТЕЛЬНАЯ ПРОВЕРКА ВЫДАННЫХ ПРАВ
+==================================================
+Pager usage is off.
+    grantee    |  table_name  | privilege_type 
+---------------+--------------+----------------
+ app_admin     | access_logs  | DELETE
+ app_admin     | access_logs  | INSERT
+ app_admin     | access_logs  | REFERENCES
+ app_admin     | access_logs  | SELECT
+ app_admin     | access_logs  | TRIGGER
+ app_admin     | access_logs  | TRUNCATE
+ app_admin     | access_logs  | UPDATE
+ app_admin     | comments     | DELETE
+ app_admin     | comments     | INSERT
+ app_admin     | comments     | REFERENCES
+ app_admin     | comments     | SELECT
+ app_admin     | comments     | TRIGGER
+ app_admin     | comments     | TRUNCATE
+ app_admin     | comments     | UPDATE
+ app_admin     | projects     | DELETE
+ app_admin     | projects     | INSERT
+ app_admin     | projects     | REFERENCES
+ app_admin     | projects     | SELECT
+ app_admin     | projects     | TRIGGER
+ app_admin     | projects     | TRUNCATE
+ app_admin     | projects     | UPDATE
+ app_admin     | task_history | DELETE
+ app_admin     | task_history | INSERT
+ app_admin     | task_history | REFERENCES
+ app_admin     | task_history | SELECT
+ app_admin     | task_history | TRIGGER
+ app_admin     | task_history | TRUNCATE
+ app_admin     | task_history | UPDATE
+ app_admin     | tasks        | DELETE
+ app_admin     | tasks        | INSERT
+ app_admin     | tasks        | REFERENCES
+ app_admin     | tasks        | SELECT
+ app_admin     | tasks        | TRIGGER
+ app_admin     | tasks        | TRUNCATE
+ app_admin     | tasks        | UPDATE
+ app_admin     | users        | DELETE
+ app_admin     | users        | INSERT
+ app_admin     | users        | REFERENCES
+ app_admin     | users        | SELECT
+ app_admin     | users        | TRIGGER
+ app_admin     | users        | TRUNCATE
+ app_admin     | users        | UPDATE
+ app_employee  | comments     | INSERT
+ app_employee  | comments     | SELECT
+ app_employee  | projects     | SELECT
+ app_employee  | task_history | SELECT
+ app_employee  | tasks        | INSERT
+ app_employee  | tasks        | SELECT
+ app_employee  | tasks        | UPDATE
+ app_guest     | projects     | SELECT
+ app_manager   | comments     | DELETE
+ app_manager   | projects     | DELETE
+ app_manager   | projects     | INSERT
+ app_manager   | projects     | UPDATE
+ app_manager   | task_history | INSERT
+ app_manager   | tasks        | DELETE
+ app_manager   | tasks        | INSERT
+ app_manager   | tasks        | UPDATE
+ app_superuser | access_logs  | DELETE
+ app_superuser | access_logs  | INSERT
+ app_superuser | access_logs  | REFERENCES
+ app_superuser | access_logs  | SELECT
+ app_superuser | access_logs  | TRIGGER
+ app_superuser | access_logs  | TRUNCATE
+ app_superuser | access_logs  | UPDATE
+ app_superuser | comments     | DELETE
+ app_superuser | comments     | INSERT
+ app_superuser | comments     | REFERENCES
+ app_superuser | comments     | SELECT
+ app_superuser | comments     | TRIGGER
+ app_superuser | comments     | TRUNCATE
+ app_superuser | comments     | UPDATE
+ app_superuser | projects     | DELETE
+ app_superuser | projects     | INSERT
+ app_superuser | projects     | REFERENCES
+ app_superuser | projects     | SELECT
+ app_superuser | projects     | TRIGGER
+ app_superuser | projects     | TRUNCATE
+ app_superuser | projects     | UPDATE
+ app_superuser | task_history | DELETE
+ app_superuser | task_history | INSERT
+ app_superuser | task_history | REFERENCES
+ app_superuser | task_history | SELECT
+ app_superuser | task_history | TRIGGER
+ app_superuser | task_history | TRUNCATE
+ app_superuser | task_history | UPDATE
+ app_superuser | tasks        | DELETE
+ app_superuser | tasks        | INSERT
+ app_superuser | tasks        | REFERENCES
+ app_superuser | tasks        | SELECT
+ app_superuser | tasks        | TRIGGER
+ app_superuser | tasks        | TRUNCATE
+ app_superuser | tasks        | UPDATE
+ app_superuser | users        | DELETE
+ app_superuser | users        | INSERT
+ app_superuser | users        | REFERENCES
+ app_superuser | users        | SELECT
+ app_superuser | users        | TRIGGER
+ app_superuser | users        | TRUNCATE
+ app_superuser | users        | UPDATE
+(100 rows)
+
+   grantee    |  table_name  |  column_name  | privilege_type 
+--------------+--------------+---------------+----------------
+ app_admin    | access_logs  | action        | INSERT
+ app_admin    | access_logs  | action        | REFERENCES
+ app_admin    | access_logs  | action        | SELECT
+ app_admin    | access_logs  | action        | UPDATE
+ app_admin    | access_logs  | ip_address    | INSERT
+ app_admin    | access_logs  | ip_address    | REFERENCES
+ app_admin    | access_logs  | ip_address    | SELECT
+ app_admin    | access_logs  | ip_address    | UPDATE
+ app_admin    | access_logs  | log_id        | INSERT
+ app_admin    | access_logs  | log_id        | REFERENCES
+ app_admin    | access_logs  | log_id        | SELECT
+ app_admin    | access_logs  | log_id        | UPDATE
+ app_admin    | access_logs  | logged_at     | INSERT
+ app_admin    | access_logs  | logged_at     | REFERENCES
+ app_admin    | access_logs  | logged_at     | SELECT
+ app_admin    | access_logs  | logged_at     | UPDATE
+ app_admin    | access_logs  | resource_id   | INSERT
+ app_admin    | access_logs  | resource_id   | REFERENCES
+ app_admin    | access_logs  | resource_id   | SELECT
+ app_admin    | access_logs  | resource_id   | UPDATE
+ app_admin    | access_logs  | resource_type | INSERT
+ app_admin    | access_logs  | resource_type | REFERENCES
+ app_admin    | access_logs  | resource_type | SELECT
+ app_admin    | access_logs  | resource_type | UPDATE
+ app_admin    | access_logs  | user_id       | INSERT
+ app_admin    | access_logs  | user_id       | REFERENCES
+ app_admin    | access_logs  | user_id       | SELECT
+ app_admin    | access_logs  | user_id       | UPDATE
+ app_admin    | comments     | comment_id    | INSERT
+ app_admin    | comments     | comment_id    | REFERENCES
+ app_admin    | comments     | comment_id    | SELECT
+ app_admin    | comments     | comment_id    | UPDATE
+ app_admin    | comments     | content       | INSERT
+ app_admin    | comments     | content       | REFERENCES
+ app_admin    | comments     | content       | SELECT
+ app_admin    | comments     | content       | UPDATE
+ app_admin    | comments     | created_at    | INSERT
+ app_admin    | comments     | created_at    | REFERENCES
+ app_admin    | comments     | created_at    | SELECT
+ app_admin    | comments     | created_at    | UPDATE
+ app_admin    | comments     | task_id       | INSERT
+ app_admin    | comments     | task_id       | REFERENCES
+ app_admin    | comments     | task_id       | SELECT
+ app_admin    | comments     | task_id       | UPDATE
+ app_admin    | comments     | user_id       | INSERT
+ app_admin    | comments     | user_id       | REFERENCES
+ app_admin    | comments     | user_id       | SELECT
+ app_admin    | comments     | user_id       | UPDATE
+ app_admin    | projects     | created_at    | INSERT
+ app_admin    | projects     | created_at    | REFERENCES
+ app_admin    | projects     | created_at    | SELECT
+ app_admin    | projects     | created_at    | UPDATE
+ app_admin    | projects     | description   | INSERT
+ app_admin    | projects     | description   | REFERENCES
+ app_admin    | projects     | description   | SELECT
+ app_admin    | projects     | description   | UPDATE
+ app_admin    | projects     | name          | INSERT
+ app_admin    | projects     | name          | REFERENCES
+ app_admin    | projects     | name          | SELECT
+ app_admin    | projects     | name          | UPDATE
+ app_admin    | projects     | owner_id      | INSERT
+ app_admin    | projects     | owner_id      | REFERENCES
+ app_admin    | projects     | owner_id      | SELECT
+ app_admin    | projects     | owner_id      | UPDATE
+ app_admin    | projects     | project_id    | INSERT
+ app_admin    | projects     | project_id    | REFERENCES
+ app_admin    | projects     | project_id    | SELECT
+ app_admin    | projects     | project_id    | UPDATE
+ app_admin    | projects     | status        | INSERT
+ app_admin    | projects     | status        | REFERENCES
+ app_admin    | projects     | status        | SELECT
+ app_admin    | projects     | status        | UPDATE
+ app_admin    | task_history | changed_at    | INSERT
+ app_admin    | task_history | changed_at    | REFERENCES
+ app_admin    | task_history | changed_at    | SELECT
+ app_admin    | task_history | changed_at    | UPDATE
+ app_admin    | task_history | changed_by    | INSERT
+ app_admin    | task_history | changed_by    | REFERENCES
+ app_admin    | task_history | changed_by    | SELECT
+ app_admin    | task_history | changed_by    | UPDATE
+ app_admin    | task_history | field_name    | INSERT
+ app_admin    | task_history | field_name    | REFERENCES
+ app_admin    | task_history | field_name    | SELECT
+ app_admin    | task_history | field_name    | UPDATE
+ app_admin    | task_history | history_id    | INSERT
+ app_admin    | task_history | history_id    | REFERENCES
+ app_admin    | task_history | history_id    | SELECT
+ app_admin    | task_history | history_id    | UPDATE
+ app_admin    | task_history | new_value     | INSERT
+ app_admin    | task_history | new_value     | REFERENCES
+ app_admin    | task_history | new_value     | SELECT
+ app_admin    | task_history | new_value     | UPDATE
+ app_admin    | task_history | old_value     | INSERT
+ app_admin    | task_history | old_value     | REFERENCES
+ app_admin    | task_history | old_value     | SELECT
+ app_admin    | task_history | old_value     | UPDATE
+ app_admin    | task_history | task_id       | INSERT
+ app_admin    | task_history | task_id       | REFERENCES
+ app_admin    | task_history | task_id       | SELECT
+ app_admin    | task_history | task_id       | UPDATE
+ app_admin    | tasks        | assignee_id   | INSERT
+ app_admin    | tasks        | assignee_id   | REFERENCES
+ app_admin    | tasks        | assignee_id   | SELECT
+ app_admin    | tasks        | assignee_id   | UPDATE
+ app_admin    | tasks        | created_at    | INSERT
+ app_admin    | tasks        | created_at    | REFERENCES
+ app_admin    | tasks        | created_at    | SELECT
+ app_admin    | tasks        | created_at    | UPDATE
+ app_admin    | tasks        | created_by    | INSERT
+ app_admin    | tasks        | created_by    | REFERENCES
+ app_admin    | tasks        | created_by    | SELECT
+ app_admin    | tasks        | created_by    | UPDATE
+ app_admin    | tasks        | description   | INSERT
+ app_admin    | tasks        | description   | REFERENCES
+ app_admin    | tasks        | description   | SELECT
+ app_admin    | tasks        | description   | UPDATE
+ app_admin    | tasks        | priority      | INSERT
+ app_admin    | tasks        | priority      | REFERENCES
+ app_admin    | tasks        | priority      | SELECT
+ app_admin    | tasks        | priority      | UPDATE
+ app_admin    | tasks        | project_id    | INSERT
+ app_admin    | tasks        | project_id    | REFERENCES
+ app_admin    | tasks        | project_id    | SELECT
+ app_admin    | tasks        | project_id    | UPDATE
+ app_admin    | tasks        | status        | INSERT
+ app_admin    | tasks        | status        | REFERENCES
+ app_admin    | tasks        | status        | SELECT
+ app_admin    | tasks        | status        | UPDATE
+ app_admin    | tasks        | task_id       | INSERT
+ app_admin    | tasks        | task_id       | REFERENCES
+ app_admin    | tasks        | task_id       | SELECT
+ app_admin    | tasks        | task_id       | UPDATE
+ app_admin    | tasks        | title         | INSERT
+ app_admin    | tasks        | title         | REFERENCES
+ app_admin    | tasks        | title         | SELECT
+ app_admin    | tasks        | title         | UPDATE
+ app_admin    | tasks        | updated_at    | INSERT
+ app_admin    | tasks        | updated_at    | REFERENCES
+ app_admin    | tasks        | updated_at    | SELECT
+ app_admin    | tasks        | updated_at    | UPDATE
+ app_admin    | users        | created_at    | INSERT
+ app_admin    | users        | created_at    | REFERENCES
+ app_admin    | users        | created_at    | SELECT
+ app_admin    | users        | created_at    | UPDATE
+ app_admin    | users        | email         | INSERT
+ app_admin    | users        | email         | REFERENCES
+ app_admin    | users        | email         | SELECT
+ app_admin    | users        | email         | UPDATE
+ app_admin    | users        | full_name     | INSERT
+ app_admin    | users        | full_name     | REFERENCES
+ app_admin    | users        | full_name     | SELECT
+ app_admin    | users        | full_name     | UPDATE
+ app_admin    | users        | is_active     | INSERT
+ app_admin    | users        | is_active     | REFERENCES
+ app_admin    | users        | is_active     | SELECT
+ app_admin    | users        | is_active     | UPDATE
+ app_admin    | users        | password_hash | INSERT
+ app_admin    | users        | password_hash | REFERENCES
+ app_admin    | users        | password_hash | SELECT
+ app_admin    | users        | password_hash | UPDATE
+ app_admin    | users        | user_id       | INSERT
+ app_admin    | users        | user_id       | REFERENCES
+ app_admin    | users        | user_id       | SELECT
+ app_admin    | users        | user_id       | UPDATE
+ app_admin    | users        | username      | INSERT
+ app_admin    | users        | username      | REFERENCES
+ app_admin    | users        | username      | SELECT
+ app_admin    | users        | username      | UPDATE
+ app_employee | comments     | comment_id    | INSERT
+ app_employee | comments     | comment_id    | SELECT
+ app_employee | comments     | content       | INSERT
+ app_employee | comments     | content       | SELECT
+ app_employee | comments     | created_at    | INSERT
+ app_employee | comments     | created_at    | SELECT
+ app_employee | comments     | task_id       | INSERT
+ app_employee | comments     | task_id       | SELECT
+ app_employee | comments     | user_id       | INSERT
+ app_employee | comments     | user_id       | SELECT
+ app_employee | projects     | created_at    | SELECT
+ app_employee | projects     | description   | SELECT
+ app_employee | projects     | name          | SELECT
+ app_employee | projects     | owner_id      | SELECT
+ app_employee | projects     | project_id    | SELECT
+ app_employee | projects     | status        | SELECT
+ app_employee | task_history | changed_at    | SELECT
+ app_employee | task_history | changed_by    | SELECT
+ app_employee | task_history | field_name    | SELECT
+ app_employee | task_history | history_id    | SELECT
+ app_employee | task_history | new_value     | SELECT
+ app_employee | task_history | old_value     | SELECT
+ app_employee | task_history | task_id       | SELECT
+ app_employee | tasks        | assignee_id   | INSERT
+ app_employee | tasks        | assignee_id   | SELECT
+ app_employee | tasks        | assignee_id   | UPDATE
+ app_employee | tasks        | created_at    | INSERT
+ app_employee | tasks        | created_at    | SELECT
+ app_employee | tasks        | created_at    | UPDATE
+ app_employee | tasks        | created_by    | INSERT
+ app_employee | tasks        | created_by    | SELECT
+ app_employee | tasks        | created_by    | UPDATE
+ app_employee | tasks        | description   | INSERT
+ app_employee | tasks        | description   | SELECT
+ app_employee | tasks        | description   | UPDATE
+ app_employee | tasks        | priority      | INSERT
+ app_employee | tasks        | priority      | SELECT
+ app_employee | tasks        | priority      | UPDATE
+ app_employee | tasks        | project_id    | INSERT
+ app_employee | tasks        | project_id    | SELECT
+ app_employee | tasks        | project_id    | UPDATE
+ app_employee | tasks        | status        | INSERT
+ app_employee | tasks        | status        | SELECT
+ app_employee | tasks        | status        | UPDATE
+ app_employee | tasks        | task_id       | INSERT
+ app_employee | tasks        | task_id       | SELECT
+ app_employee | tasks        | task_id       | UPDATE
+ app_employee | tasks        | title         | INSERT
+ app_employee | tasks        | title         | SELECT
+ app_employee | tasks        | title         | UPDATE
+ app_employee | tasks        | updated_at    | INSERT
+ app_employee | tasks        | updated_at    | SELECT
+ app_employee | tasks        | updated_at    | UPDATE
+ app_employee | users        | created_at    | SELECT
+ app_employee | users        | full_name     | SELECT
+ app_employee | users        | is_active     | SELECT
+ app_employee | users        | user_id       | SELECT
+ app_employee | users        | username      | SELECT
+(226 rows)
+
